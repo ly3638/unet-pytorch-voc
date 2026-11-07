@@ -1,0 +1,7 @@
+prefix=/home/featurize/work/unet-pytorch-main1
+includedir=${prefix}/include
+
+Name: VideoProto
+Description: Video extension headers
+Version: 2.3.3
+Cflags: -I${includedir}
