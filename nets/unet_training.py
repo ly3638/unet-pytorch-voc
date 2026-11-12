@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-//损失函数
+#损失函数
 def CE_Loss(inputs, target, cls_weights, num_classes=21):
     n, c, h, w = inputs.size()
     nt, ht, wt = target.size()
