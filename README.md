@@ -1,159 +1,202 @@
-## Unet：U-Net: Convolutional Networks for Biomedical Image Segmentation目标检测模型在Pytorch当中的实现
----
+# Massachusetts Roads 道路语义分割项目
 
-### 目录
-1. [仓库更新 Top News](#仓库更新)
-2. [相关仓库 Related code](#相关仓库)
-3. [性能情况 Performance](#性能情况)
-4. [所需环境 Environment](#所需环境)
-5. [文件下载 Download](#文件下载)
-6. [训练步骤 How2train](#训练步骤)
-7. [预测步骤 How2predict](#预测步骤)
-8. [评估步骤 miou](#评估步骤)
-9. [参考资料 Reference](#Reference)
+基于 PyTorch 的 U-Net 道路语义分割实验项目。项目使用 Massachusetts Roads 数据集的切片图像，对卫星影像中的道路区域进行像素级识别。
 
-## Top News
-**`2022-03`**:**进行大幅度更新、支持step、cos学习率下降法、支持adam、sgd优化器选择、支持学习率根据batch_size自适应调整。**  
-BiliBili视频中的原仓库地址为：https://github.com/bubbliiiing/unet-pytorch/tree/bilibili
+> 当前仓库以 U-Net 基线实验为主。其他网络结构和改进模块属于后续可开展的研究方向，除非代码中已有实现，否则不应视为已完成实验。
 
-**`2020-08`**:**创建仓库、支持多backbone、支持数据miou评估、标注数据处理、大量注释等。**  
+## 1. 项目简介
 
-## 相关仓库
-| 模型 | 路径 |
-| :----- | :----- |
-Unet | https://github.com/bubbliiiing/unet-pytorch  
-PSPnet | https://github.com/bubbliiiing/pspnet-pytorch
-deeplabv3+ | https://github.com/bubbliiiing/deeplabv3-plus-pytorch
+本项目将道路提取视为二分类语义分割任务：
 
-### 性能情况
-**unet并不适合VOC此类数据集，其更适合特征少，需要浅层特征的医药数据集之类的。**
-| 训练数据集 | 权值文件名称 | 测试数据集 | 输入图片大小 | mIOU | 
-| :-----: | :-----: | :------: | :------: | :------: | 
-| VOC12+SBD | [unet_vgg_voc.pth](https://github.com/bubbliiiing/unet-pytorch/releases/download/v1.0/unet_vgg_voc.pth) | VOC-Val12 | 512x512| 58.78 | 
-| VOC12+SBD | [unet_resnet_voc.pth](https://github.com/bubbliiiing/unet-pytorch/releases/download/v1.0/unet_resnet_voc.pth) | VOC-Val12 | 512x512| 67.53 | 
+- **Background**：背景
+- **Road**：道路
 
-### 所需环境
-torch==1.2.0    
-torchvision==0.4.0   
+当前实验数据与配置概况：
 
-### 文件下载
-训练所需的权值可在百度网盘中下载。    
-链接: https://pan.baidu.com/s/1A22fC5cPRb74gqrpq7O9-A    
-提取码: 6n2c   
+| 项目 | 当前情况 |
+|---|---|
+| 数据集 | Massachusetts Roads |
+| 任务 | 二分类语义分割 |
+| 基线网络 | U-Net |
+| Backbone | VGG（当前基线配置） |
+| 输入尺寸 | 512 × 512 |
+| 类别数 | 2 |
+| 训练集 | 2327 张切片 |
+| 验证集 | 251 张切片 |
+| 总计 | 2578 张切片 |
 
-VOC拓展数据集的百度网盘如下：   
-链接: https://pan.baidu.com/s/1vkk3lMheUm6IjTXznlg7Ng    
-提取码: 44mk   
+## 2. 项目目录
 
-### 训练步骤
-#### 一、训练voc数据集
-1、将我提供的voc数据集放入VOCdevkit中（无需运行voc_annotation.py）。  
-2、运行train.py进行训练，默认参数已经对应voc数据集所需要的参数了。  
+主要代码和数据目录如下（以本地实际目录为准）：
 
-#### 二、训练自己的数据集
-1、本文使用VOC格式进行训练。  
-2、训练前将标签文件放在VOCdevkit文件夹下的VOC2007文件夹下的SegmentationClass中。    
-3、训练前将图片文件放在VOCdevkit文件夹下的VOC2007文件夹下的JPEGImages中。    
-4、在训练前利用voc_annotation.py文件生成对应的txt。    
-5、注意修改train.py的num_classes为分类个数+1。    
-6、运行train.py即可开始训练。  
-
-#### 三、训练医药数据集
-1、下载VGG的预训练权重到model_data下面。  
-2、按照默认参数运行train_medical.py即可开始训练。
-
-### 预测步骤
-#### 一、使用预训练权重
-##### a、VOC预训练权重
-1. 下载完库后解压，如果想要利用voc训练好的权重进行预测，在百度网盘或者release下载权值，放入model_data，运行即可预测。  
-```python
-img/street.jpg
-```    
-2. 在predict.py里面进行设置可以进行fps测试和video视频检测。    
-##### b、医药预训练权重
-1. 下载完库后解压，如果想要利用医药数据集训练好的权重进行预测，在百度网盘或者release下载权值，放入model_data，修改unet.py中的model_path和num_classes；
-```python
-_defaults = {
-    #-------------------------------------------------------------------#
-    #   model_path指向logs文件夹下的权值文件
-    #   训练好后logs文件夹下存在多个权值文件，选择验证集损失较低的即可。
-    #   验证集损失较低不代表miou较高，仅代表该权值在验证集上泛化性能较好。
-    #-------------------------------------------------------------------#
-    "model_path"    : 'model_data/unet_vgg_medical.pth',
-    #--------------------------------#
-    #   所需要区分的类的个数+1
-    #--------------------------------#
-    "num_classes"   : 2,
-    #--------------------------------#
-    #   所使用的的主干网络：vgg、resnet50   
-    #--------------------------------#
-    "backbone"      : "vgg",
-    #--------------------------------#
-    #   输入图片的大小
-    #--------------------------------#
-    "input_shape"   : [512, 512],
-    #--------------------------------#
-    #   blend参数用于控制是否
-    #   让识别结果和原图混合
-    #--------------------------------#
-    "blend"         : True,
-    #--------------------------------#
-    #   是否使用Cuda
-    #   没有GPU可以设置成False
-    #--------------------------------#
-    "cuda"          : True,
-}
+```text
+unet-pytorch-voc/
+├── VOCdevkit/
+│   └── VOC2007/
+│       ├── JPEGImages/                 # 输入卫星影像切片
+│       ├── SegmentationClass/          # 对应分割标签
+│       └── ImageSets/
+│           └── Segmentation/
+│               ├── train.txt           # 训练集文件列表
+│               └── val.txt             # 验证集文件列表
+├── nets/
+│   ├── unet.py                         # U-Net 网络结构
+│   └── unet_training.py                # 训练相关模块
+├── utils/                              # 数据处理、评估及训练工具
+├── train.py                            # 训练入口
+├── predict.py                          # 单张图像预测入口
+├── unet.py                             # 模型封装及预测接口
+├── get_miou.py                         # 独立验证集评估
+├── check_dataset.py                    # 数据集检查脚本
+├── split_full_dataset.py               # 数据集划分辅助脚本
+├── show_prediction.py                  # 预测结果可视化脚本
+└── README.md
 ```
-2. 运行即可预测。  
-```python
-img/cell.png
-```
-#### 二、使用自己训练的权重
-1. 按照训练步骤训练。    
-2. 在unet.py文件里面，在如下部分修改model_path、backbone和num_classes使其对应训练好的文件；**model_path对应logs文件夹下面的权值文件**。    
-```python
-_defaults = {
-    #-------------------------------------------------------------------#
-    #   model_path指向logs文件夹下的权值文件
-    #   训练好后logs文件夹下存在多个权值文件，选择验证集损失较低的即可。
-    #   验证集损失较低不代表miou较高，仅代表该权值在验证集上泛化性能较好。
-    #-------------------------------------------------------------------#
-    "model_path"    : 'model_data/unet_vgg_voc.pth',
-    #--------------------------------#
-    #   所需要区分的类的个数+1
-    #--------------------------------#
-    "num_classes"   : 21,
-    #--------------------------------#
-    #   所使用的的主干网络：vgg、resnet50   
-    #--------------------------------#
-    "backbone"      : "vgg",
-    #--------------------------------#
-    #   输入图片的大小
-    #--------------------------------#
-    "input_shape"   : [512, 512],
-    #--------------------------------#
-    #   blend参数用于控制是否
-    #   让识别结果和原图混合
-    #--------------------------------#
-    "blend"         : True,
-    #--------------------------------#
-    #   是否使用Cuda
-    #   没有GPU可以设置成False
-    #--------------------------------#
-    "cuda"          : True,
-}
-```
-3. 运行predict.py，输入    
-```python
-img/street.jpg
-```   
-4. 在predict.py里面进行设置可以进行fps测试和video视频检测。    
 
-### 评估步骤
-1、设置get_miou.py里面的num_classes为预测的类的数量加1。  
-2、设置get_miou.py里面的name_classes为需要去区分的类别。  
-3、运行get_miou.py即可获得miou大小。  
+## 3. 数据集准备
 
-## Reference
-https://github.com/ggyyzm/pytorch_segmentation  
-https://github.com/bonlime/keras-deeplab-v3-plus
+数据按 VOC 风格目录组织。输入图像与标签应使用可对应的文件名，并分别放入：
+
+- 图像：`VOCdevkit/VOC2007/JPEGImages/`
+- 标签：`VOCdevkit/VOC2007/SegmentationClass/`
+
+训练和验证样本列表位于：
+
+`VOCdevkit/VOC2007/ImageSets/Segmentation/`
+
+其中每行填写一个样本 ID（不含扩展名），例如 `image_1`。
+
+### 当前数据划分
+
+| 子集 | 数量 | 占比 |
+|---|---:|---:|
+| Training | 2327 | 90.27% |
+| Validation | 251 | 9.73% |
+| Total | 2578 | 100% |
+
+当前仓库使用已有的 `train.txt` 和 `val.txt`，没有单独的 `test.txt`。因此，训练期间及独立评估脚本得到的这些结果应称为**验证集结果**，不能称为独立测试集结果。
+
+### 数据划分局限
+
+目前可用数据为切片图像，缺少切片与原始地理大图之间的对应关系。虽然现有训练集与验证集列表不存在样本 ID 重复，但仅凭切片文件名无法确认两部分在地理空间上相互独立，也无法排除相邻切片分布在不同子集中的可能性。因此，实验结果需要考虑潜在的空间相关性和数据泄漏风险。后续若获得原始影像及切片映射信息，建议优先按原始影像或地理区域进行空间独立划分。
+
+## 4. 环境与依赖
+
+项目基于 Python 和 PyTorch。运行前请根据自己的操作系统、CUDA 版本及项目代码安装兼容的依赖。
+
+常见依赖包括：
+
+- PyTorch
+- torchvision
+- NumPy
+- Pillow
+- OpenCV
+- Matplotlib
+- SciPy
+- tqdm
+
+本 README 不固定未经核实的依赖版本；建议在实际实验环境中导出并保存依赖清单，例如：
+
+```bash
+pip freeze > requirements.txt
+```
+
+## 5. 数据集检查
+
+训练前可运行：
+
+```bash
+python check_dataset.py
+```
+
+该脚本用于检查数据集中的图像与标签，包括文件对应情况、图像尺寸及标签像素类别等。请根据脚本实际输出确认数据符合训练要求。
+
+## 6. 模型训练
+
+在项目根目录运行：
+
+```bash
+python train.py
+```
+
+当前基线任务为二分类道路分割，主要配置包括：
+
+- 类别数：2
+- Backbone：VGG
+- 输入尺寸：512 × 512
+- 训练/验证列表：`train.txt` / `val.txt`
+
+开始训练前，请检查 `train.py` 中的数据路径、类别数、输入尺寸、预训练权重设置、批量大小、学习率和训练轮数等参数，并确认权重保存目录可用。
+
+训练过程中会根据代码配置执行验证与权重保存。具体评估周期和最佳权重文件名以当前 `train.py` 的设置及实际运行输出为准。
+
+## 7. 模型评估
+
+项目提供独立评估脚本：
+
+```bash
+python get_miou.py
+```
+
+运行前请检查脚本中的模型权重路径、类别数、类别名称和数据集路径，确保与训练配置一致。
+
+当前类别名称为：
+
+```python
+name_classes = ["_background_", "road"]
+```
+
+评估时可关注：
+
+- **IoU**：各类别交并比
+- **mIoU**：类别 IoU 的平均值
+- **Precision**：精确率
+- **Recall**：召回率
+
+请在实验记录中注明指标来自验证集，并保持不同模型使用相同的验证样本和评价口径。
+
+## 8. 模型预测与结果可视化
+
+根据当前项目入口运行预测：
+
+```bash
+python predict.py
+```
+
+预测前需确认 `unet.py` 或相关配置中的模型权重路径、类别数、Backbone 和输入尺寸与训练模型相匹配。
+
+项目还包含 `show_prediction.py`，用于展示预测结果。道路分割实验可将以下内容并列比较：
+
+1. 原始卫星影像
+2. Ground Truth（真实标签）
+3. Prediction（模型预测）
+4. Error Map（错误区域）
+5. Overlay（预测结果叠加图）
+
+可视化样本应来自明确记录的验证集样本，便于不同实验之间进行公平比较。
+
+## 9. 后续实验方向
+
+在完成并记录 U-Net 基线实验后，可以考虑在相同数据划分、训练策略和评价指标下开展模型对比，例如：
+
+- U-Net
+- U-Net++
+- DeepLabV3+
+- ResUNet
+
+如果实现新的改进模块，也可以设计消融实验，分别评估各模块及其组合对道路提取效果的影响。以上为可选研究方向；具体模型是否已实现，请以仓库代码为准。
+
+## 10. 实验规范与注意事项
+
+- 固定训练集和验证集列表，确保模型对比实验使用相同的数据划分。
+- 记录随机种子、训练参数、软件与硬件环境、模型权重及评价结果。
+- 当前没有独立测试集，不能将验证集指标表述为测试集指标。
+- 当前缺少原始大图映射，不能声称训练集和验证集已经实现空间独立。
+- 数据集图片、训练日志和模型权重可能占用较大空间。上传前请检查文件大小，并通过 `.gitignore` 排除不适合放入代码仓库的文件；不要误删本地实验数据。
+
+## 11. 参考项目
+
+本项目参考了以下 U-Net PyTorch 实现：
+
+- https://github.com/bubbliiiing/unet-pytorch
+
